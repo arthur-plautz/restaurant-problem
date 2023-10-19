@@ -6,10 +6,10 @@
 #include <semaphore.h>
 #include "types.h"
 
-void print_drink(int drink_id){
+void print_drink(int client_id, int drink_id){
     char drinks[6][10] = {"🍹", "🍺", "🥃", "🍾", "🍸", "🍷"};
     char drink_names[6][10] = {"tiki", "beer", "whisky", "champagne", "martini", "wine"};
-    printf("%s %s", drink_names[drink_id], drinks[drink_id]);
+    printf("\n[Client %d] Drinking %s %s", client_id, drink_names[drink_id], drinks[drink_id]);
 }
 
 void random_sleep(int max_time)
@@ -19,15 +19,13 @@ void random_sleep(int max_time)
 };
 
 void print_order(Order order){
-    printf("\n{order=%d, client=%d, drink=%d, waiter=%d}", order.id_order, order.id_client, order.id_drink, order.id_waiter);
+    printf("\n{order=%d, client=%d, drink=%d, waiter=%d, round=%d}", order.id_order, order.id_client, order.id_drink, order.id_waiter, order.round);
 }
 
 void rotate_orders(int n_orders, Order* orders){
-    if(n_orders > 1) {
-        for (int i = n_orders; i > 0; i--)
-        {
-            orders[i] = orders[i-1];
-        }
+    for (int i = 0; i < n_orders-1; i++)
+    {
+        orders[i] = orders[i+1];
     }
 };
 

@@ -10,19 +10,25 @@ void print_order(Order order);
 void rotate_orders(int n_orders, Order *orders);
 
 void receive_orders(Waiter* waiter, Bar* bar){
-    for (size_t i = 0; i < waiter->capacity; i++)
-    {
+    int received_orders = 0;
+    while(received_orders < waiter->capacity){
         sem_wait(bar->sem_requested_orders);
         if(!bar->closed){
             pthread_mutex_lock(bar->requested_orders_mtx);
-            int index = bar->requested_orders_start;
-            Order order = bar->requested_orders[index];
-            order.id_waiter = waiter->waiter_id;
-            printf("\n[Waiter %d] Receiving order %d.", waiter->waiter_id, order.id_order);
-
-            rotate_orders(waiter->capacity, waiter->orders);
-            waiter->orders[0] = order;
-            bar->requested_orders_start--;
+            for (size_t j = 0; j < bar->n_requested_orders; j++)
+            {
+                Order order = bar->requested_orders[j];
+                if((order.id_order > 0) && (order.round == bar->round)){
+                    order.id_waiter = waiter->waiter_id;
+                    printf("\n[Waiter %d] Receiving order %d. (r%d)", waiter->waiter_id, order.id_order, order.round);
+                    rotate_orders(waiter->capacity, waiter->orders);
+                    waiter->orders[waiter->capacity-1] = order;
+                    bar->requested_orders[j] = (Order){0};
+                    received_orders++;
+                    break;
+                    fflush(stdout);
+                }
+            }
             pthread_mutex_unlock(bar->requested_orders_mtx);
         } else {
             pthread_exit(NULL);
@@ -34,28 +40,36 @@ void register_orders(Waiter* waiter, Bar* bar){
     pthread_mutex_lock(bar->registered_orders_mtx);
     for (size_t i = 0; i < waiter->capacity; i++)
     {
-        printf("\n[Waiter %d] Registering order %d.", waiter->waiter_id, waiter->orders[i].id_order);
-        bar->registered_orders[bar->registered_orders_index] = waiter->orders[i];
-        bar->registered_orders_index++;
+        printf("\n[Waiter %d] Registering order %d. (r%d)", waiter->waiter_id, waiter->orders[i].id_order, waiter->orders[i].round);
+        rotate_orders(bar->n_registered_orders, bar->registered_orders);
+        bar->registered_orders[bar->n_registered_orders-1] = waiter->orders[i];
     }
     pthread_mutex_unlock(bar->registered_orders_mtx);
+    fflush(stdout);
 };
 
 void deliver_orders(Waiter* waiter, Bar* bar){
-
-    for (size_t i = waiter->capacity; i > 0; i--)
+    printf("\n[Waiter %d] Delivering...", waiter->waiter_id);
+    for (size_t i = 0; i < waiter->capacity; i++)
     {
-        int index = i-1;
         pthread_mutex_lock(bar->delivered_orders_mtx);
-        rotate_orders(bar->delivered_orders_max_size, bar->delivered_orders);
-        bar->delivered_orders[0] = waiter->orders[index];
-        bar->delivered_orders_start++;
-        sem_post(bar->sem_delivered_orders);
+        rotate_orders(bar->n_delivered_orders, bar->delivered_orders);
+        Order order = waiter->orders[i];
+        bar->delivered_orders[bar->n_delivered_orders-1] = order;
+        printf("\n[Waiter %d] Delivering order %d to client %d. (r%d)", waiter->waiter_id, order.id_order, order.id_client, order.round);
         pthread_mutex_unlock(bar->delivered_orders_mtx);
-        printf("\n[Waiter %d] Delivering order %d to client %d.", waiter->waiter_id, waiter->orders[index].id_order, waiter->orders[index].id_client);
+        sem_post(bar->sem_delivered_orders[order.id_client-1]);
     }
+    fflush(stdout);
 };
 
+void increment_round(Waiter* waiter, Bar* bar){
+    printf("\n[Waiter %d] Taking round notes.", waiter->waiter_id);
+    for (size_t i = 0; i < waiter->capacity; i++)
+    {
+        sem_post(bar->sem_rounds);
+    }
+}
 
 void waiter_action(void* data){
     WaiterData* waiter_data = (WaiterData*) data;
@@ -66,5 +80,6 @@ void waiter_action(void* data){
         receive_orders(waiter, bar);
         register_orders(waiter, bar);
         deliver_orders(waiter, bar);
+        increment_round(waiter, bar);
     };
 };
