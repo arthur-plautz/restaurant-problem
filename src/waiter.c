@@ -26,7 +26,6 @@ void receive_orders(Waiter* waiter, Bar* bar){
                     bar->requested_orders[j] = (Order){0};
                     received_orders++;
                     break;
-                    fflush(stdout);
                 }
             }
             pthread_mutex_unlock(bar->requested_orders_mtx);
@@ -45,7 +44,6 @@ void register_orders(Waiter* waiter, Bar* bar){
         bar->registered_orders[bar->n_registered_orders-1] = waiter->orders[i];
     }
     pthread_mutex_unlock(bar->registered_orders_mtx);
-    fflush(stdout);
 };
 
 void deliver_orders(Waiter* waiter, Bar* bar){
@@ -60,7 +58,6 @@ void deliver_orders(Waiter* waiter, Bar* bar){
         pthread_mutex_unlock(bar->delivered_orders_mtx);
         sem_post(bar->sem_delivered_orders[order.id_client-1]);
     }
-    fflush(stdout);
 };
 
 void increment_round(Waiter* waiter, Bar* bar){

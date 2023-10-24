@@ -65,12 +65,12 @@ int main(int argc, char *argv[])
     sem_t sem_rounds;
     sem_t sem_requested_orders;
     sem_t** sem_delivered_orders = malloc(sizeof(sem_t)*n_clients);
-    
+
     for (size_t i = 0; i < n_clients; i++)
     {
-        sem_t sem_client;
-        sem_delivered_orders[i] = &sem_client;
-        sem_init(&sem_client,0,0);
+        sem_t* sem_client = malloc(sizeof(sem_t));
+        sem_delivered_orders[i] = sem_client;
+        sem_init(sem_client,0,0);
     }
 
     Bar bar = {
@@ -118,11 +118,20 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < rounds; i++)
     {
         printf("\n\n[starting round %d]\n", bar.round);
+        pthread_mutex_lock(bar.requested_orders_mtx);
+        for (size_t i = 0; i < n_clients; i++){
+            Order order = bar.requested_orders[i];
+            if(order.id_order > 0){
+                sem_post(bar.sem_requested_orders);
+            }
+        }
+        pthread_mutex_unlock(bar.requested_orders_mtx);
         int counter = 0;
         while (counter < n_clients){
-            sem_wait(bar.sem_rounds); 
+            sem_wait(bar.sem_rounds);
             counter++;
         }
+        printf("\n\n[finishing round %d]\n", bar.round);
         bar.round++;
     }
     bar.closed = 1;
@@ -139,8 +148,10 @@ int main(int argc, char *argv[])
     finish_client_threads(n_clients, client_threads, clients);
     free(client_data);
 
-    for (size_t i = 0; i < n_clients; i++)
-         sem_destroy(sem_delivered_orders[i]);
+    for (size_t i = 0; i < n_clients; i++){
+        free(sem_delivered_orders[i]);
+        sem_destroy(sem_delivered_orders[i]);
+    }
 
     pthread_mutex_destroy(bar.requested_orders_mtx);
     pthread_mutex_destroy(bar.registered_orders_mtx);

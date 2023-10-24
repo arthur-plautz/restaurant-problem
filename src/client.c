@@ -21,7 +21,7 @@ void chat(Client* client, int max_chatting_time)
 void request_order(Client* client, Bar* bar){
     Order order = (Order){
         .round = client->round,
-        .id_client = client->client_id,
+        .id_client = (int) client->client_id,
         .id_drink = rand() % 6,
         .id_order = (rand() % 1000)+1
     };
@@ -31,13 +31,15 @@ void request_order(Client* client, Bar* bar){
     printf("\n[Client %d] Making new order %d", client->client_id, order.id_order);
     rotate_orders(bar->n_requested_orders, bar->requested_orders);
     bar->requested_orders[bar->n_requested_orders-1] = order;
+    if(client->round == bar->round){
+        sem_post(bar->sem_requested_orders);
+    }
     pthread_mutex_unlock(bar->requested_orders_mtx);
-    sem_post(bar->sem_requested_orders);
-    fflush(stdout);
 };
 
 void wait_order(Client* client, Bar* bar){
-    sem_wait(bar->sem_delivered_orders[client->client_id-1]);
+    sem_t* sem_client = bar->sem_delivered_orders[(client->client_id-1)];
+    sem_wait(sem_client);
     if(!bar->closed){
         printf("\n[Client %d] Waiting for order %d to be prepared.", client->client_id, client->order->id_order);
         pthread_mutex_lock(bar->delivered_orders_mtx);
@@ -48,7 +50,6 @@ void wait_order(Client* client, Bar* bar){
                 client->order = &order;
                 bar->delivered_orders[i] = (Order){0};
                 printf("\n[Client %d] Order %d received.", client->client_id, order.id_order);
-                fflush(stdout);
                 break;
             }
         }
@@ -62,7 +63,6 @@ void drink(Client* client, int max_consuming_time)
 {
     print_drink(client->client_id, client->order->id_drink);
     random_sleep(max_consuming_time);
-    fflush(stdout);
 };
 
 void client_action(void* data)
