@@ -71,6 +71,20 @@ void assign_waiters_to_clients(int waiter_capacity, int n_waiters, Waiter* waite
     }
 }
 
+void start_round(Bar* bar, int n_waiters, int n_clients){
+    pthread_mutex_lock(bar->requested_orders_mtx);
+    for (size_t i = 0; i < n_waiters; i++)
+    {
+        for (size_t j = 0; j < n_clients; j++)
+        {
+            Order order = bar->requested_orders[i][j];
+            if (order.id_order > 0)
+                sem_post(bar->sem_requested_orders[order.id_waiter - 1]);
+        }
+    }
+    pthread_mutex_unlock(bar->requested_orders_mtx);
+}
+
 void initialize_requested_orders(int n_waiters, int n_clients, Order** requested_orders){
     for (size_t i = 0; i < n_waiters; i++)
     {
@@ -158,18 +172,8 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < rounds; i++)
     {
         printf("\n\n[starting round %d]\n", bar.round);
-        if(i > 0){
-            pthread_mutex_lock(bar.requested_orders_mtx);
-            for (size_t i = 0; i < n_waiters; i++){
-                for (size_t j = 0; j < n_clients; j++)
-                {
-                    Order order = bar.requested_orders[i][j];
-                    if(order.id_order > 0)
-                        sem_post(bar.sem_requested_orders[order.id_waiter-1]);
-                }
-            }
-            pthread_mutex_unlock(bar.requested_orders_mtx);
-        }
+        if(i > 0)
+            start_round(&bar, n_waiters, n_clients);
         int counter = 0;
         while (counter < n_clients){
             sem_wait(bar.sem_rounds);
@@ -186,11 +190,12 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < (n_clients); i++)
         sem_post(bar.sem_delivered_orders[i]);
 
+    finish_client_threads(n_clients, client_threads, clients);
+    free(client_data);
+
     finish_waiter_threads(n_waiters, waiter_threads, waiters);
     free(waiter_data);
 
-    finish_client_threads(n_clients, client_threads, clients);
-    free(client_data);
 
     finalize_requested_orders(n_waiters, requested_orders);
     finalize_semaphores(n_waiters, sem_requested_orders);

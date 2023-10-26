@@ -23,13 +23,19 @@ void request_order(Client* client, Bar* bar){
         .round = client->round,
         .id_client = client->client_id,
         .id_waiter = client->waiter_id,
-        .id_drink = rand() % 6,
         .id_order = (rand() % 1000)+1
     };
+    if (!(rand() % 5))
+        order.id_drink = -1;
+    else
+        order.id_drink = rand() % 6;
     client->order = &order;
 
     pthread_mutex_lock(bar->requested_orders_mtx);
-    printf("\n[Client %d] Making new order %d to waiter %d (round %d)", client->client_id, order.id_order, client->waiter_id, client->round);
+    if(order.id_drink > 0)
+        printf("\n[Client %d] Making new order %d to waiter %d. (round %d)", client->client_id, order.id_order, client->waiter_id, client->round);
+    else
+        printf("\n[Client %d] Decided to pass this round...", client->client_id);
     rotate_orders(bar->n_requested_orders, bar->requested_orders[client->waiter_id-1]);
     bar->requested_orders[client->waiter_id-1][bar->n_requested_orders-1] = order;
     if(client->round == bar->round){
@@ -41,7 +47,8 @@ void request_order(Client* client, Bar* bar){
 void wait_order(Client* client, Bar* bar){
     sem_wait(bar->sem_delivered_orders[(client->client_id-1)]);
     if(!bar->closed){
-        printf("\n[Client %d] Waiting for order %d to be prepared.", client->client_id, client->order->id_order);
+        if(client->order->id_drink > 0)
+            printf("\n[Client %d] Waiting for order %d to be prepared.", client->client_id, client->order->id_order);
         pthread_mutex_lock(bar->delivered_orders_mtx);
         for (size_t i = 0; i < bar->n_delivered_orders; i++)
         {
@@ -49,7 +56,8 @@ void wait_order(Client* client, Bar* bar){
             if(order.id_client == client->client_id){
                 client->order = &order;
                 bar->delivered_orders[i] = (Order){0};
-                printf("\n[Client %d] Order %d received.", client->client_id, order.id_order);
+                if (client->order->id_drink > 0)
+                    printf("\n[Client %d] Order %d received.", client->client_id, order.id_order);
                 break;
             }
         }
@@ -61,8 +69,10 @@ void wait_order(Client* client, Bar* bar){
 
 void drink(Client* client, int max_consuming_time)
 {
-    print_drink(client->client_id, client->order->id_drink);
-    random_sleep(max_consuming_time);
+    if(client->order->id_drink > 0){
+        print_drink(client->client_id, client->order->id_drink);
+        random_sleep(max_consuming_time);
+    }
 };
 
 void client_action(void* data)
