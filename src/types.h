@@ -18,7 +18,7 @@ typedef struct {
     int waiter_id;
     int capacity;
     int clients;
-    int orders_left;
+    int service_control;
     Order* orders;
 } Waiter;
 

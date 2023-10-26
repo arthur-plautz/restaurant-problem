@@ -69,8 +69,6 @@ void assign_waiters_to_clients(int waiter_capacity, int n_waiters, Waiter* waite
             assigned_clients++;
         }
     }
-    for (size_t i = 0; i < n_waiters; i++)
-        waiters[i].orders_left = waiters[i].clients;
 }
 
 void initialize_requested_orders(int n_waiters, int n_clients, Order** requested_orders){
@@ -160,8 +158,6 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < rounds; i++)
     {
         printf("\n\n[starting round %d]\n", bar.round);
-        for (size_t i = 0; i < n_waiters; i++)
-            waiters[i].orders_left = waiters[i].clients;
         if(i > 0){
             pthread_mutex_lock(bar.requested_orders_mtx);
             for (size_t i = 0; i < n_waiters; i++){

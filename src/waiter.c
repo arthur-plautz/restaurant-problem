@@ -12,7 +12,8 @@ void rotate_orders(int n_orders, Order *orders);
 void receive_orders(Waiter* waiter, Bar* bar){
     int received_orders = 0;
     int total_orders = waiter->capacity;
-    if (waiter->clients % waiter->capacity && waiter->orders_left > 0 && waiter->orders_left < waiter->capacity)
+    int round_services = (waiter->clients / waiter->capacity);
+    if (waiter->clients % waiter->capacity && !(waiter->service_control % (round_services+1)))
         total_orders = waiter->clients % waiter->capacity;
     while(received_orders < total_orders){
         sem_wait(bar->sem_requested_orders[waiter->waiter_id-1]);
@@ -62,7 +63,6 @@ void deliver_orders(Waiter* waiter, Bar* bar){
             rotate_orders(bar->n_delivered_orders, bar->delivered_orders);
             bar->delivered_orders[bar->n_delivered_orders-1] = order;
             printf("\n[Waiter %d] Delivering order %d to client %d. (round %d)", waiter->waiter_id, order.id_order, order.id_client, order.round);
-            waiter->orders_left--;
             waiter->orders[i] = (Order){0};
             sem_post(bar->sem_delivered_orders[order.id_client-1]);
             pthread_mutex_unlock(bar->delivered_orders_mtx);
@@ -72,6 +72,7 @@ void deliver_orders(Waiter* waiter, Bar* bar){
 
 void increment_round(Waiter* waiter, Bar* bar){
     printf("\n[Waiter %d] Taking round notes.", waiter->waiter_id);
+    waiter->service_control++;
     for (size_t i = 0; i < waiter->capacity; i++)
         sem_post(bar->sem_rounds);
 }
