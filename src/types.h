@@ -1,4 +1,5 @@
 
+// Model definitions
 typedef struct {
     int id_client;
     int id_waiter;
@@ -47,6 +48,7 @@ typedef struct {
     sem_t** sem_delivered_orders;
 } Bar;
 
+// Data payloads for threads
 typedef struct {
     Waiter* waiter;
     Bar* bar;
