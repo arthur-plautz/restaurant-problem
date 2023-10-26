@@ -31,7 +31,6 @@ typedef struct {
     int round;
     int rounds;
     sem_t* sem_rounds;
-    sem_t** sem_new_round;
 
     Order** requested_orders;
     int n_requested_orders;

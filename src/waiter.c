@@ -12,7 +12,7 @@ void rotate_orders(int n_orders, Order *orders);
 void receive_orders(Waiter* waiter, Bar* bar){
     int received_orders = 0;
     int total_orders = waiter->capacity;
-    if ((waiter->orders_left == waiter->clients) && (waiter->clients % waiter->capacity))
+    if (waiter->clients % waiter->capacity && waiter->orders_left > 0 && waiter->orders_left < waiter->capacity)
         total_orders = waiter->clients % waiter->capacity;
     while(received_orders < total_orders){
         sem_wait(bar->sem_requested_orders[waiter->waiter_id-1]);
@@ -73,9 +73,7 @@ void deliver_orders(Waiter* waiter, Bar* bar){
 void increment_round(Waiter* waiter, Bar* bar){
     printf("\n[Waiter %d] Taking round notes.", waiter->waiter_id);
     for (size_t i = 0; i < waiter->capacity; i++)
-    {
         sem_post(bar->sem_rounds);
-    }
 }
 
 void waiter_action(void* data){

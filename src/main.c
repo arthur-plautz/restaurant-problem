@@ -119,14 +119,11 @@ int main(int argc, char *argv[])
 
     sem_t sem_rounds;
     sem_init(&sem_rounds, 0, 0);
-    sem_t** sem_new_round = malloc(sizeof(sem_t)*n_waiters);
-    initialize_semaphores(n_waiters, sem_new_round);
 
     Bar bar = {
         .round = 1,
         .rounds = rounds,
         .sem_rounds = &sem_rounds,
-        .sem_new_round = sem_new_round,
 
         .max_chatting_time = max_chatting_time,
         .max_consuming_time = max_consuming_time,
@@ -163,9 +160,9 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < rounds; i++)
     {
         printf("\n\n[starting round %d]\n", bar.round);
+        for (size_t i = 0; i < n_waiters; i++)
+            waiters[i].orders_left = waiters[i].clients;
         if(i > 0){
-            for (size_t i = 0; i < n_waiters; i++)
-                waiters[i].orders_left = waiters[i].clients;
             pthread_mutex_lock(bar.requested_orders_mtx);
             for (size_t i = 0; i < n_waiters; i++){
                 for (size_t j = 0; j < n_clients; j++)
@@ -202,7 +199,6 @@ int main(int argc, char *argv[])
     finalize_requested_orders(n_waiters, requested_orders);
     finalize_semaphores(n_waiters, sem_requested_orders);
     finalize_semaphores(n_clients, sem_delivered_orders);
-    finalize_semaphores(n_waiters, bar.sem_new_round);
 
     pthread_mutex_destroy(bar.requested_orders_mtx);
     pthread_mutex_destroy(bar.registered_orders_mtx);
@@ -211,7 +207,6 @@ int main(int argc, char *argv[])
 
     free(bar.sem_delivered_orders);
     free(bar.sem_requested_orders);
-    free(bar.sem_new_round);
 
     printf("\n\nRegistered Orders:");
     for (size_t i = 0; i < bar.n_registered_orders; i++)
