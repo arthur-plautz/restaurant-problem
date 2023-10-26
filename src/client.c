@@ -21,32 +21,32 @@ void chat(Client* client, int max_chatting_time)
 void request_order(Client* client, Bar* bar){
     Order order = (Order){
         .round = client->round,
-        .id_client = (int) client->client_id,
+        .id_client = client->client_id,
+        .id_waiter = client->waiter_id,
         .id_drink = rand() % 6,
         .id_order = (rand() % 1000)+1
     };
     client->order = &order;
 
     pthread_mutex_lock(bar->requested_orders_mtx);
-    printf("\n[Client %d] Making new order %d", client->client_id, order.id_order);
-    rotate_orders(bar->n_requested_orders, bar->requested_orders);
-    bar->requested_orders[bar->n_requested_orders-1] = order;
+    printf("\n[Client %d] Making new order %d to waiter %d (round %d)", client->client_id, order.id_order, client->waiter_id, client->round);
+    rotate_orders(bar->n_requested_orders, bar->requested_orders[client->waiter_id-1]);
+    bar->requested_orders[client->waiter_id-1][bar->n_requested_orders-1] = order;
     if(client->round == bar->round){
-        sem_post(bar->sem_requested_orders);
+        sem_post(bar->sem_requested_orders[client->waiter_id-1]);
     }
     pthread_mutex_unlock(bar->requested_orders_mtx);
 };
 
 void wait_order(Client* client, Bar* bar){
-    sem_t* sem_client = bar->sem_delivered_orders[(client->client_id-1)];
-    sem_wait(sem_client);
+    sem_wait(bar->sem_delivered_orders[(client->client_id-1)]);
     if(!bar->closed){
         printf("\n[Client %d] Waiting for order %d to be prepared.", client->client_id, client->order->id_order);
         pthread_mutex_lock(bar->delivered_orders_mtx);
         for (size_t i = 0; i < bar->n_delivered_orders; i++)
         {
             Order order = bar->delivered_orders[i];
-            if((order.id_client) == (client->client_id)){
+            if(order.id_client == client->client_id){
                 client->order = &order;
                 bar->delivered_orders[i] = (Order){0};
                 printf("\n[Client %d] Order %d received.", client->client_id, order.id_order);

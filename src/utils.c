@@ -15,11 +15,28 @@ void print_drink(int client_id, int drink_id){
 void random_sleep(int max_time)
 {
     int random_time = (rand() % (max_time));
-    sleep(random_time);
+    sleep(random_time/1000);
 };
 
 void print_order(Order order){
     printf("\n{order=%d, client=%d, drink=%d, waiter=%d, round=%d}", order.id_order, order.id_client, order.id_drink, order.id_waiter, order.round);
+}
+
+void initialize_semaphores(int n_sem, sem_t** sem_list){
+    for (size_t i = 0; i < n_sem; i++)
+    {
+        sem_t *sem = malloc(sizeof(sem_t));
+        sem_list[i] = sem;
+        sem_init(sem, 0, 0);
+    }
+}
+void finalize_semaphores(int n_sem, sem_t **sem_list)
+{
+    for (size_t i = 0; i < n_sem; i++)
+    {
+        free(sem_list[i]);
+        sem_destroy(sem_list[i]);
+    }
 }
 
 void rotate_orders(int n_orders, Order* orders){

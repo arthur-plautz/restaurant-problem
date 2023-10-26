@@ -9,6 +9,7 @@ typedef struct {
 
 typedef struct {
     int client_id;
+    int waiter_id;
     int round;
     Order* order;
 } Client;
@@ -16,6 +17,8 @@ typedef struct {
 typedef struct {
     int waiter_id;
     int capacity;
+    int clients;
+    int orders_left;
     Order* orders;
 } Waiter;
 
@@ -28,11 +31,12 @@ typedef struct {
     int round;
     int rounds;
     sem_t* sem_rounds;
+    sem_t** sem_new_round;
 
-    Order* requested_orders;
+    Order** requested_orders;
     int n_requested_orders;
     pthread_mutex_t* requested_orders_mtx;
-    sem_t* sem_requested_orders;
+    sem_t** sem_requested_orders;
 
     Order* registered_orders;
     int n_registered_orders;
