@@ -12,7 +12,7 @@ typedef struct {
     int client_id;
     int waiter_id;
     int round;
-    Order* order;
+    Order order;
 } Client;
 
 typedef struct {

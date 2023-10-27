@@ -33,7 +33,7 @@ void request_order(Client* client, Bar* bar){
         order.id_drink = -1;
     else
         order.id_drink = rand() % 6; // Choosing randomly among 6 possible drinks
-    client->order = &order;
+    client->order = order;
 
     pthread_mutex_lock(bar->requested_orders_mtx);
     if(order.id_drink > 0)
@@ -58,8 +58,8 @@ void wait_order(Client* client, Bar* bar){
     sem_wait(bar->sem_delivered_orders[(client->client_id-1)]);
     if(!bar->closed){
         // If this round client decided to pass, will not be a drink id on the order
-        if(client->order->id_drink > 0)
-            printf("\n[Client %d] Waiting for order %d to be prepared.", client->client_id, client->order->id_order);
+        if(client->order.id_drink > 0)
+            printf("\n[Client %d] Waiting for order %d to be prepared.", client->client_id, client->order.id_order);
     } else {
         pthread_exit(NULL);
     }
@@ -74,10 +74,10 @@ void receive_order(Client *client, Bar *bar)
         Order order = bar->delivered_orders[i];
         if (order.id_client == client->client_id)
         {
-            client->order = &order;
+            client->order = order;
             bar->delivered_orders[i] = (Order){0}; // Here we replace that spot on the list with an empty order
 
-            if (client->order->id_drink > 0) // Only prints if the client order a drink
+            if (client->order.id_drink > 0) // Only prints if the client order a drink
                 printf("\n[Client %d] Order %d received.", client->client_id, order.id_order);
             break;
         }
@@ -88,8 +88,8 @@ void receive_order(Client *client, Bar *bar)
 
 void drink(Client* client, int max_consuming_time)
 {
-    if(client->order->id_drink > 0){ // Only prints if the client order a drink
-        print_drink(client->client_id, client->order->id_drink);
+    if(client->order.id_drink > 0){ // Only prints if the client order a drink
+        print_drink(client->client_id, client->order.id_drink);
         random_sleep(max_consuming_time); // Drinking for a random time
     }
 };

@@ -35,11 +35,11 @@ void create_clients(Client* clients, int n_clients)
 {
     for (size_t i = 0; i < n_clients; i++)
     {
-        Order order;
+        Order order = {0};
         Client client = {
             .round = 1,
             .client_id = i+1,
-            .order = &order
+            .order = order
         };
         clients[i] = client;
     };
